@@ -1,3 +1,9 @@
+#!/usr/bin/python3
+#
+# @file sir.py SIR model epidemic simulation
+# @author ms3  
+#
+ 
 import os, subprocess
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,6 +12,7 @@ from scipy.spatial import KDTree
 
 colors = np.array(['#365162', '#9c5315', '#cdbfb3']) #np.array(['#c9dda6', '#a67178', '#a5ccac'])
 
+# create a flow chart of the model
 def create_flow_chart(fig, beta, gamma):
     ax0 = fig.add_axes([0., 0.75, 1., 0.2])
     ax0.set_aspect('equal')
@@ -58,12 +65,14 @@ def create_flow_chart(fig, beta, gamma):
     ax0.set(xlim = [-x_space, x], ylim = [-0.5, 3.5])
     return ax0
 
+# create a box for showing simulations (agents)
 def create_simulation_space(fig):
     sim_width = 0.8
     ax1 = fig.add_axes([0.1, 0.15, sim_width, sim_width])
     ax1.set_aspect('equal')
     return ax1
 
+# create axes for showing graphes
 def create_graph(fig):
     ax2 = fig.add_axes([0.1, 0.1, 0.8, 0.2])
     ax2.tick_params(axis = 'both', which = 'major', labelsize = 22)
@@ -71,6 +80,7 @@ def create_graph(fig):
         ax2.spines[i].set_linewidth(2)
     return ax2
 
+# linear interpolate between two colours
 def lerp_color(c1, c2, values, v1, v2):
     r1, g1, b1 = int('0x' + c1[1:3], 16), int('0x' + c1[3:5], 16), int('0x' + c1[5:7], 16)
     r2, g2, b2 = int('0x' + c2[1:3], 16), int('0x' + c2[3:5], 16), int('0x' + c2[5:7], 16)
@@ -85,6 +95,7 @@ def lerp_color(c1, c2, values, v1, v2):
                     )
     return c
 
+# draw agents to a axis
 def draw_agents(ax1, position, state, t_minus, t_recover):
     ax1.clear()
     ax1.add_patch(patches.Rectangle([0, 0], 
@@ -106,6 +117,7 @@ def draw_agents(ax1, position, state, t_minus, t_recover):
     ax1.set_xticks([])
     ax1.set_yticks([])
 
+# draw / update the graph
 def draw_graph(ax2, counts, n_agents):
     ax2.clear()
     t = len(counts) - 1
@@ -117,6 +129,7 @@ def draw_graph(ax2, counts, n_agents):
     ax2.set_xlabel('time', fontsize = 24)
     return
 
+# create the main figure 
 def create_frame(beta, gamma):
     fig = plt.figure(figsize = [10.80, 19.20], dpi = 100)
     ax0 = create_flow_chart(fig, beta, gamma) 
@@ -124,6 +137,8 @@ def create_frame(beta, gamma):
     ax2 = create_graph(fig)
     return fig, (ax1, ax2)
 
+# start the simulation: agents will have random position and except 5 infected, all will be in the 
+# susceptible compartment. return the position, state, time to recover and initial count
 def initialize_simulation(n_agents, t_recover):
     position = np.random.uniform(low = 0., high = 1., size = [n_agents, 2])
     state    = np.zeros(n_agents, dtype = 'int') 
@@ -137,6 +152,9 @@ def initialize_simulation(n_agents, t_recover):
 
     return position, state, t_minus, counts
 
+# update the agents position and state. infection is passed to nearby agents at a probability beta
+# if the agents are within transmission radius. after the recovery time, an infected agent is 
+# recovered. same return objects as initialize 
 def update_agents(position, state, t_minus, counts, n_agents, beta, t_recover, transmission_radius):
     tree = KDTree(position, leafsize = 20)
     infected,  = np.where(state == 1)
@@ -162,6 +180,7 @@ def update_agents(position, state, t_minus, counts, n_agents, beta, t_recover, t
 
     return position, state, t_minus, counts
 
+# create the video!
 def create_simulation_video(n_agents, beta, t_recover, transmission_radius, t_max, video_length, fps):
     gamma    = 1 / t_recover
     n_frames = video_length * fps
@@ -178,7 +197,7 @@ def create_simulation_video(n_agents, beta, t_recover, transmission_radius, t_ma
         draw_agents(ax1, position, state, t_minus, t_recover)
         draw_graph(ax2, counts, n_agents) 
 
-        fig.savefig('tmp/sir_sim_%04d.png' % frame)
+        fig.savefig('tmp/frame_%04d.png' % frame)
 
         if frame % fpu:
             continue
@@ -198,7 +217,7 @@ def create_simulation_video(n_agents, beta, t_recover, transmission_radius, t_ma
                     '-framerate', 
                     '24',
                     '-i',
-                    'tmp/sir_sim_%04d.png',
+                    'tmp/frame_%04d.png',
                     # '-i', 'audio_file',
                     '-shortest',
                     '-c:v', 
